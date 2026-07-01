@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 from statistics import median
-from typing import Iterable
+from typing import Iterable, cast
 
 from pydantic import BaseModel, Field
 
@@ -72,7 +73,17 @@ class RunMetrics(BaseModel):
         3. Write a single-row CSV with csv.DictWriter (import csv at top of file)
         4. Create parent directories if needed
         """
-        raise NotImplementedError("TODO: implement write_csv()")
+        report = self.to_report_dict()
+        scenarios = cast(dict[str, str], report.pop("scenarios", {}))
+        for name, status in scenarios.items():
+            report[f"scenario_{name}"] = status
+
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(report.keys()))
+            writer.writeheader()
+            writer.writerow(report)
 
 
 def percentile(values: Iterable[float], q: float) -> float:
